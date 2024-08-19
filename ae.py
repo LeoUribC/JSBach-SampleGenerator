@@ -80,8 +80,12 @@ class Autoencoder:
             name = f"encoder_conv_layer_{layer_number}"
         )
 
+        x = conv_layer(x)
+        x = ks.layers.ReLU(name=f"encoder_relu_{layer_number}")(x)
+        x = ks.layers.BatchNormalization(name=f"encoder_bn_{layer_number}")(x)
 
-        
+        return x
+    
 
-        pass
+    
 
