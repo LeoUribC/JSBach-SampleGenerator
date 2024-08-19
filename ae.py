@@ -1,6 +1,7 @@
 
 import keras as ks
 from keras import Model, Input
+from keras import backend as K
 
 
 
@@ -31,6 +32,7 @@ class Autoencoder:
 
         # private attributes
         self._num_conv_layers = len(conv_filters)
+        self._shape_before_bottleneck = None
         
         self._build()
 
@@ -87,5 +89,19 @@ class Autoencoder:
         return x
     
 
+    def _add_bottleneck(self, x):
+        """
+        Flatten data and add bottleneck (Dense layer)
+        """
+
+        self._shape_before_bottleneck = K.int_shape(x)[1:]
+        x = ks.layers.Flatten()(x)
+        x = ks.layers.Dense(self.latent_space_dim, name="encoder_output")(x)
+
+        return x
     
+
+
+
+
 
