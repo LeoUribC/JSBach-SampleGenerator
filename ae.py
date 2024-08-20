@@ -2,6 +2,7 @@
 import keras as ks
 from keras import Model, Input
 #from keras import backend as K
+import numpy as np
 
 
 
@@ -42,13 +43,83 @@ class Autoencoder:
         to print on console information about the architecture
         """
         self.encoder.summary()
+        self.decoder.summary()
 
     
     def _build(self):
         self._build_encoder()
-        #self._build_decoder()
+        self._build_decoder()
         #self._build_autoencoder()
     
+
+    def _build_decoder(self):
+        decoder_input = self._add_decoder_input()
+        dense_layer = self._add_dense_layer(decoder_input)
+        reshape_layer = self._add_reshape_layer(dense_layer)
+        conv_transpose_layers = self._add_conv_transpose_layers(reshape_layer)
+        decoder_output = self._add_decoder_output(conv_transpose_layers)
+        self.decoder = Model(decoder_input, decoder_output, name="decoder")
+    
+
+    def _add_decoder_input(self):
+        return Input(shape=(self.latent_space_dim,), name="decoder_input")
+    
+
+    def _add_dense_layer(self, decoder_input):
+        num_neurons = np.prod(self._shape_before_bottleneck)
+        dense_layer = ks.layers.Dense(num_neurons, name="decoder_dense")(decoder_input)
+        return dense_layer
+    
+
+    def _add_reshape_layer(self, dense_layer):
+        return ks.layers.Reshape(self._shape_before_bottleneck)(dense_layer)
+    
+
+    def _add_conv_transpose_layers(self, x):
+        """
+        Add conv transpose blocks
+        """
+        # loop through all the conv layers in reverse order and stop at the 1st layer
+        for layer_index in reversed( range(1, self._num_conv_layers) ):
+            x = self._add_conv_transpose_layer(layer_index, x)
+
+        return x
+    
+
+    def _add_conv_transpose_layer(self, layer_index, x):
+
+        layer_num = self._num_conv_layers - layer_index
+
+        conv_transpose_layer = ks.layers.Conv2DTranspose(
+            filters = self.conv_filters[layer_index],
+            kernel_size = self.conv_kernels[layer_index],
+            strides = self.conv_strides[layer_index],
+            padding="same",
+            name=f"decoder_conv_transpose_layer_{layer_num}"
+        )
+
+        x = conv_transpose_layer(x)
+        x = ks.layers.ReLU(name=f"decoder_relu_{layer_num}")(x)
+        x = ks.layers.BatchNormalization(name=f"decoder_bn_{layer_num}")(x)
+
+        return x
+    
+
+    def _add_decoder_output(self, x):
+
+        conv_transpose_layer = ks.layers.Conv2DTranspose(
+            filters = 1,
+            kernel_size = self.conv_kernels[0],
+            strides = self.conv_strides[0],
+            padding="same",
+            name=f"decoder_conv_transpose_layer_{self._num_conv_layers}"
+        )
+
+        x = conv_transpose_layer(x)
+        output_layer = ks.layers.Activation("sigmoid", name="sigmoid_layer")(x)
+
+        return output_layer
+
 
     def _build_encoder(self):
         encoder_input = self._add_encoder_input()
