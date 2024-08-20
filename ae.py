@@ -1,7 +1,7 @@
 
 import keras as ks
 from keras import Model, Input
-from keras import backend as K
+#from keras import backend as K
 
 
 
@@ -35,12 +35,19 @@ class Autoencoder:
         self._shape_before_bottleneck = None
         
         self._build()
+    
+
+    def summary(self):
+        """
+        to print on console information about the architecture
+        """
+        self.encoder.summary()
 
     
     def _build(self):
         self._build_encoder()
-        self._build_decoder()
-        self._build_autoencoder()
+        #self._build_decoder()
+        #self._build_autoencoder()
     
 
     def _build_encoder(self):
@@ -61,12 +68,12 @@ class Autoencoder:
         x = encoder_input
 
         for layer_index in range(self._num_conv_layers):
-            x = self._add_conv_layers(layer_index, x)
+            x = self._add_conv_layer(layer_index, x)
         
         return x
 
 
-    def _add_conv_layers(self, layer_index, x):
+    def _add_conv_layer(self, layer_index, x):
         """
         Adds a convolutional block to a graph of layers, consisting of
         conv 2d + ReLU + batch normalization layer
@@ -94,7 +101,7 @@ class Autoencoder:
         Flatten data and add bottleneck (Dense layer)
         """
 
-        self._shape_before_bottleneck = K.int_shape(x)[1:]
+        self._shape_before_bottleneck = x.shape[1:]
         x = ks.layers.Flatten()(x)
         x = ks.layers.Dense(self.latent_space_dim, name="encoder_output")(x)
 
@@ -102,6 +109,15 @@ class Autoencoder:
     
 
 
+if __name__ == "__main__":
 
+    autoencoder = Autoencoder(
+        input_shape=(28, 28, 1),
+        conv_filters=(32, 64, 64, 64),
+        conv_kernels=(3, 3, 3 ,3),
+        conv_strides=(1, 2, 2, 1),
+        latent_space_dim=2
+    )
 
+    autoencoder.summary()
 
