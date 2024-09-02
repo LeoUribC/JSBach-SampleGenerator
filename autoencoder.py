@@ -75,6 +75,12 @@ class Autoencoder:
         self.model.load_weights(weights_path)
     
 
+    def reconstruct(self, images):
+        latent_representations = self.encoder.predict(images)
+        reconstructed_images = self.decoder.predict(latent_representations)
+        return reconstructed_images, latent_representations
+    
+
     @classmethod
     def load(cls, save_folder="."):
 
