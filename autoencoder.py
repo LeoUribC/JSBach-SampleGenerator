@@ -6,12 +6,17 @@ import keras as ks
 from keras import Model, Input
 #from keras import backend as K
 import numpy as np
+import tensorflow as tf
 
 
 
-class Autoencoder:
+tf.compat.v1.disable_eager_execution()
+
+
+
+class VAE:
     """
-    autoencoder represents a Deep Convolutional autoencoder architecture with
+    VAE represents a Deep Convolutional VAE architecture with
     mirrored encoder and decoder components.
     """
 
@@ -88,7 +93,7 @@ class Autoencoder:
         with open(parameters_path, "rb") as f:
             parameters = pickle.load(f)
 
-        autoencoder = Autoencoder(*parameters)
+        autoencoder = VAE(*parameters)
         weights_path = os.path.join(save_folder, ".weights.h5")
         autoencoder.load_weights(weights_path)
 
@@ -247,14 +252,33 @@ class Autoencoder:
         return x
     
 
+
     def _add_bottleneck(self, x):
         """
-        Flatten data and add bottleneck (Dense layer)
+        Flatten data and add bottleneck with Gaussian sampling (Dense layer)
         """
 
         self._shape_before_bottleneck = x.shape[1:]
         x = ks.layers.Flatten()(x)
-        x = ks.layers.Dense(self.latent_space_dim, name="encoder_output")(x)
+
+        self.mu = ks.layers.Dense(self.latent_space_dim, name="mu")(x)
+        self.log_variance = ks.layers.Dense(self.latent_space_dim,
+                                            name="log_variance")(x)
+        
+
+        def sample_point_from_normal_distribution(args):
+            mu, log_variance = args
+            epsilon = ks.random.normal(shape=ks.ops.shape(self.mu),
+                                       mean=0.0, stddev=1.0)
+            sampled_point = mu + ks.ops.exp(log_variance / 2) * epsilon
+            return sampled_point
+
+
+        x = ks.layers.Lambda(sample_point_from_normal_distribution,
+                             name="encoder_output")([self.mu, self.log_variance])
+        
+        
+        #x = ks.layers.Dense(self.latent_space_dim, name="encoder_output")(x)
 
         return x
     
@@ -262,7 +286,7 @@ class Autoencoder:
 
 if __name__ == "__main__":
 
-    autoencoder = Autoencoder(
+    autoencoder = VAE(
         input_shape=(28, 28, 1),
         conv_filters=(32, 64, 64, 64),
         conv_kernels=(3, 3, 3 ,3),
