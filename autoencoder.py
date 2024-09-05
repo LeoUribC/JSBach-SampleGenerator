@@ -11,7 +11,7 @@ import tensorflow as tf
 
 
 tf.compat.v1.disable_eager_execution()
-
+#tf.compat.v1.enable_eager_execution()
 
 
 class VAE:
@@ -34,6 +34,7 @@ class VAE:
         self.conv_strides = conv_strides
 
         self.latent_space_dim = latent_space_dim
+        self.reconstruction_loss_weight = 1000
 
         self.encoder = None
         self.decoder = None
@@ -58,10 +59,12 @@ class VAE:
 
     def compile(self, learning_rate=0.0001):
         optimizer = ks.optimizers.Adam(learning_rate=learning_rate)
-        mse_loss = ks.losses.MeanSquaredError()
-        self.model.compile(optimizer=optimizer, loss=mse_loss)
+        self.model.compile(optimizer=optimizer,
+                           loss=self._calculate_combined_loss,
+                           metrics=[self._calculate_reconstruction_loss,
+                                    self._calculate_kl_loss])
     
-
+    @tf.function
     def train(self, x_train, batch_size, num_epochs):
         self.model.fit( x_train,
                         x_train,
@@ -99,6 +102,25 @@ class VAE:
 
         return autoencoder
     
+
+    def _calculate_combined_loss(self, y_target, y_predicted):
+        reconstruction_loss = self._calculate_reconstruction_loss(y_target, y_predicted)
+        kl_loss = self._calculate_kl_loss(y_target, y_predicted)
+        combined_loss = self.reconstruction_loss_weight * reconstruction_loss + kl_loss
+        return combined_loss
+    
+
+    def _calculate_reconstruction_loss(self, y_target, y_predicted):
+        error = y_target - y_predicted
+        reconstruction_loss = ks.ops.mean(ks.ops.square(error), axis=[1, 2, 3])
+        return reconstruction_loss
+    
+
+    def _calculate_kl_loss(self, y_target, y_predicted):
+        kl_loss = -0.5 * ks.ops.sum( 1 + self.log_variance - ks.ops.square(self.mu) -
+                                     ks.ops.exp(self.log_variance), axis=1 )
+        return kl_loss
+
 
     def _create_folder_if_it_doesnt_exist(self, folder):
         if not os.path.exists(folder):
@@ -275,13 +297,12 @@ class VAE:
 
 
         x = ks.layers.Lambda(sample_point_from_normal_distribution,
-                             name="encoder_output")([self.mu, self.log_variance])
-        
-        
-        #x = ks.layers.Dense(self.latent_space_dim, name="encoder_output")(x)
+                             name="encoder_output",
+                             output_shape=(self.latent_space_dim,)
+                             )([self.mu, self.log_variance])
 
         return x
-    
+
 
 
 if __name__ == "__main__":
