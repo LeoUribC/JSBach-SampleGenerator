@@ -1,12 +1,12 @@
 import keras as ks
 
-from autoencoder import Autoencoder
+from autoencoder import VAE
 
 
 
 LEARNING_RATE = 0.0005
 BATCH_SIZE = 32
-EPOCHS = 20
+EPOCHS = 100
 
 
 
@@ -25,7 +25,7 @@ def load_mnist():
 
 def train(x_train, learning_rate, batch_size, epochs):
 
-    autoencoder = Autoencoder(
+    autoencoder = VAE(
         input_shape=(28, 28, 1),
         conv_filters=(32, 64, 64, 64),
         conv_kernels=(3, 3, 3 ,3),
