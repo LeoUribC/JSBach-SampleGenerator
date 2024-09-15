@@ -2,9 +2,13 @@
 import os
 import pickle
 
-import keras as ks
-from keras import Model, Input
-#from keras import backend as K
+#import keras as ks
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
+    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
 import tensorflow as tf
 
@@ -58,13 +62,13 @@ class VAE:
     
 
     def compile(self, learning_rate=0.0001):
-        optimizer = ks.optimizers.Adam(learning_rate=learning_rate)
+        optimizer = Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer,
                            loss=self._calculate_combined_loss,
                            metrics=[self._calculate_reconstruction_loss,
                                     self._calculate_kl_loss])
     
-    @tf.function
+
     def train(self, x_train, batch_size, num_epochs):
         self.model.fit( x_train,
                         x_train,
@@ -112,13 +116,13 @@ class VAE:
 
     def _calculate_reconstruction_loss(self, y_target, y_predicted):
         error = y_target - y_predicted
-        reconstruction_loss = ks.ops.mean(ks.ops.square(error), axis=[1, 2, 3])
+        reconstruction_loss = K.mean(K.square(error), axis=[1, 2, 3])
         return reconstruction_loss
     
 
     def _calculate_kl_loss(self, y_target, y_predicted):
-        kl_loss = -0.5 * ks.ops.sum( 1 + self.log_variance - ks.ops.square(self.mu) -
-                                     ks.ops.exp(self.log_variance), axis=1 )
+        kl_loss = -0.5 * K.sum( 1 + self.log_variance - K.square(self.mu) -
+                                K.exp(self.log_variance), axis=1 )
         return kl_loss
 
 
@@ -168,17 +172,17 @@ class VAE:
     
 
     def _add_decoder_input(self):
-        return Input(shape=(self.latent_space_dim,), name="decoder_input")
+        return Input(shape=self.latent_space_dim, name="decoder_input")
     
 
     def _add_dense_layer(self, decoder_input):
         num_neurons = np.prod(self._shape_before_bottleneck)
-        dense_layer = ks.layers.Dense(num_neurons, name="decoder_dense")(decoder_input)
+        dense_layer = Dense(num_neurons, name="decoder_dense")(decoder_input)
         return dense_layer
     
 
     def _add_reshape_layer(self, dense_layer):
-        return ks.layers.Reshape(self._shape_before_bottleneck)(dense_layer)
+        return Reshape(self._shape_before_bottleneck)(dense_layer)
     
 
     def _add_conv_transpose_layers(self, x):
@@ -196,7 +200,7 @@ class VAE:
 
         layer_num = self._num_conv_layers - layer_index
 
-        conv_transpose_layer = ks.layers.Conv2DTranspose(
+        conv_transpose_layer = Conv2DTranspose(
             filters = self.conv_filters[layer_index],
             kernel_size = self.conv_kernels[layer_index],
             strides = self.conv_strides[layer_index],
@@ -205,15 +209,15 @@ class VAE:
         )
 
         x = conv_transpose_layer(x)
-        x = ks.layers.ReLU(name=f"decoder_relu_{layer_num}")(x)
-        x = ks.layers.BatchNormalization(name=f"decoder_bn_{layer_num}")(x)
+        x = ReLU(name=f"decoder_relu_{layer_num}")(x)
+        x = BatchNormalization(name=f"decoder_bn_{layer_num}")(x)
 
         return x
     
 
     def _add_decoder_output(self, x):
 
-        conv_transpose_layer = ks.layers.Conv2DTranspose(
+        conv_transpose_layer = Conv2DTranspose(
             filters = 1,
             kernel_size = self.conv_kernels[0],
             strides = self.conv_strides[0],
@@ -222,7 +226,7 @@ class VAE:
         )
 
         x = conv_transpose_layer(x)
-        output_layer = ks.layers.Activation("sigmoid", name="sigmoid_layer")(x)
+        output_layer = Activation("sigmoid", name="sigmoid_layer")(x)
 
         return output_layer
 
@@ -259,7 +263,7 @@ class VAE:
 
         layer_number = layer_index + 1
 
-        conv_layer = ks.layers.Conv2D(
+        conv_layer = Conv2D(
             filters = self.conv_filters[layer_index],
             kernel_size = self.conv_kernels[layer_index],
             strides = self.conv_strides[layer_index],
@@ -268,8 +272,8 @@ class VAE:
         )
 
         x = conv_layer(x)
-        x = ks.layers.ReLU(name=f"encoder_relu_{layer_number}")(x)
-        x = ks.layers.BatchNormalization(name=f"encoder_bn_{layer_number}")(x)
+        x = ReLU(name=f"encoder_relu_{layer_number}")(x)
+        x = BatchNormalization(name=f"encoder_bn_{layer_number}")(x)
 
         return x
     
@@ -280,26 +284,24 @@ class VAE:
         Flatten data and add bottleneck with Gaussian sampling (Dense layer)
         """
 
-        self._shape_before_bottleneck = x.shape[1:]
-        x = ks.layers.Flatten()(x)
+        self._shape_before_bottleneck = K.int_shape(x)[1:]
+        x = Flatten()(x)
 
-        self.mu = ks.layers.Dense(self.latent_space_dim, name="mu")(x)
-        self.log_variance = ks.layers.Dense(self.latent_space_dim,
-                                            name="log_variance")(x)
+        self.mu = Dense(self.latent_space_dim, name="mu")(x)
+        self.log_variance = Dense(self.latent_space_dim,
+                                  name="log_variance")(x)
         
 
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
-            epsilon = ks.random.normal(shape=ks.ops.shape(self.mu),
-                                       mean=0.0, stddev=1.0)
-            sampled_point = mu + ks.ops.exp(log_variance / 2) * epsilon
+            epsilon = K.random_normal(shape=K.shape(self.mu),
+                                      mean=0.0, stddev=1.0)
+            sampled_point = mu + K.exp(log_variance / 2) * epsilon
             return sampled_point
 
 
-        x = ks.layers.Lambda(sample_point_from_normal_distribution,
-                             name="encoder_output",
-                             output_shape=(self.latent_space_dim,)
-                             )([self.mu, self.log_variance])
+        x = Lambda(sample_point_from_normal_distribution,
+                   name="encoder_output")([self.mu, self.log_variance])
 
         return x
 
