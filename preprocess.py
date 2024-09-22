@@ -10,6 +10,7 @@ PreprocessingPipeline
 import librosa
 import numpy as np
 import os
+import pickle
 
 
 
@@ -64,7 +65,7 @@ class LogSpectrogramExtractor:
     
     """
     LogSpectrogramExtractor extracts log spectrograms (in dB) from a
-    time series signal
+    time-series signal
     """
 
     def __init__(self, frame_size, hop_length):
@@ -112,7 +113,38 @@ class MinMaxNormalizer:
 
 class Saver:
 
-    pass
+    """
+    Saver is responsible to save features, and the min max values
+    """
+
+    def __init__(self, feature_save_dir, min_max_values_save_dir):
+
+        self.feature_save_dir = feature_save_dir
+        self.min_max_values_save_dir = min_max_values_save_dir
+    
+
+    def save_feature(self, feature, file_path):
+        save_path = self._generate_save_path(file_path)
+        np.save(save_path, feature)
+    
+
+    def save_min_max_values(self, min_max_values):
+        save_path = os.path.join(self.min_max_values_save_dir,
+                                 "min_max_values.pkl")
+        self._save(min_max_values, save_path)
+    
+
+    @staticmethod
+    def _save(data, save_path):
+
+        with open(save_path, "wb") as f:
+            pickle.dump(data, f)
+    
+
+    def _generate_save_path(self, file_path):
+        file_name = os.path.split(file_path)[1]
+        save_path = os.path.join(self.feature_save_dir, file_name + ".npy")
+        return save_path
 
 
 
@@ -133,7 +165,7 @@ class PreprocessingPipeline:
 
     def __init__(self):
 
-        self.loader = None
+        #self.loader = None
         self.padder = None
         self.extractor = None
         self.normalizer = None
@@ -160,6 +192,9 @@ class PreprocessingPipeline:
             for file in files:
                 file_path = os.path.join(root, file)
                 self._process_file(file_path)
+                print(f"Processed file {file_path}")
+        
+        self.saver.save_min_max_values(self.min_max_values)
 
     
     def _process_file(self, file_path):
@@ -171,7 +206,7 @@ class PreprocessingPipeline:
         
         feature = self.extractor.extract(signal)
         norm_feature = self.normalizer.normalize(feature)
-        save_path = self.saver.save_feature(norm_feature)
+        save_path = self.saver.save_feature(norm_feature, file_path)
         self._store_min_max_value( save_path, feature.min(), feature.max() )
 
 
@@ -187,7 +222,44 @@ class PreprocessingPipeline:
 
         num_missing_samples = self._num_expected_samples - len(signal)
         padded_signal = self.padder.right_pad(signal, num_missing_samples)
-        
-        return padded_signal
 
+        return padded_signal
+    
+
+    def _store_min_max_value(self, save_path, min_val, max_val):
+
+        self.min_max_values[save_path] = {
+            "min" : min_val,
+            "max" : max_val
+        }
+
+
+
+if __name__ == "__main__":
+
+    FRAME_SIZE = 512
+    HOP_LENGTH = 256
+    DURATION = 0.74  # in seconds
+    SAMPLE_RATE = 22050
+    MONO = True
+
+    SPECTROGRAMS_SAVE_DIR = "/home/leo_uc/Documentos/2024_2/Enfasis_III/spectrograms/"
+    MIN_MAX_VALUES_SAVE_DIR = "/home/leo_uc/Documentos/2024_2/Enfasis_III/"
+    FILES_DIR = "/home/leo_uc/Documentos/2024_2/Enfasis_III/recordings/"
+
+    # instantiation of objects
+    loader = Loader(SAMPLE_RATE, DURATION, MONO)
+    padder = Padder()
+    log_spectrogram_extractor = LogSpectrogramExtractor(FRAME_SIZE, HOP_LENGTH)
+    min_max_normalizer = MinMaxNormalizer(0, 1)
+    saver = Saver(SPECTROGRAMS_SAVE_DIR, MIN_MAX_VALUES_SAVE_DIR)
+
+    preprocessing_pipeline = PreprocessingPipeline()
+    preprocessing_pipeline.loader = loader
+    preprocessing_pipeline.padder = padder
+    preprocessing_pipeline.extractor = log_spectrogram_extractor
+    preprocessing_pipeline.normalizer = min_max_normalizer
+    preprocessing_pipeline.saver = saver
+
+    preprocessing_pipeline.process(FILES_DIR)
 
