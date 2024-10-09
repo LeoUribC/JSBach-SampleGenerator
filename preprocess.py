@@ -243,9 +243,10 @@ if __name__ == "__main__":
     SAMPLE_RATE = 22050
     MONO = True
 
-    SPECTROGRAMS_SAVE_DIR = "/home/leo_uc/Documentos/2024_2/Enfasis_III/spectrograms/"
-    MIN_MAX_VALUES_SAVE_DIR = "/home/leo_uc/Documentos/2024_2/Enfasis_III/"
-    FILES_DIR = "/home/leo_uc/Documentos/2024_2/Enfasis_III/recordings/"
+    # change directories path to run on google colab
+    SPECTROGRAMS_SAVE_DIR = "/content/spectrograms"
+    MIN_MAX_VALUES_SAVE_DIR = "/content"
+    FILES_DIR = "/content/recordings/recordings"
 
     # instantiation of objects
     loader = Loader(SAMPLE_RATE, DURATION, MONO)

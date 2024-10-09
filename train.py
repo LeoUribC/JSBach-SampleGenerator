@@ -9,7 +9,8 @@ LEARNING_RATE = 0.0005
 BATCH_SIZE = 64
 EPOCHS = 150
 
-SPECTROGRAMS_PATH = "/home/leo_uc/Documentos/2024_2/Enfasis_III/spectrograms/"
+# this path corresponds to google colab environment
+SPECTROGRAMS_PATH = "/content/spectrograms/"
 
 
 
