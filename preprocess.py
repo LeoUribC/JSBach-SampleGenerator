@@ -246,7 +246,7 @@ if __name__ == "__main__":
     # change directories path to run on google colab
     SPECTROGRAMS_SAVE_DIR = "/content/spectrograms"
     MIN_MAX_VALUES_SAVE_DIR = "/content"
-    FILES_DIR = "/content/recordings/recordings"
+    FILES_DIR = "/content/free-spoken-digit-dataset/recordings"
 
     # instantiation of objects
     loader = Loader(SAMPLE_RATE, DURATION, MONO)
