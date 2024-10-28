@@ -134,14 +134,14 @@ class VAE:
         reconstruction_loss = tf.reduce_mean(tf.square(error), axis=[1, 2, 3])
         return reconstruction_loss
     
-    #@tf.function
+    @tf.function
     def _calculate_kl_loss(self, y_target, y_predicted):
         
-        #mu_value = tf.keras.backend.get_value(self.mu)
-        squared_mu = tf.square(self.mu)
+        mu_value = tf.keras.backend.get_value(self.mu)
+        squared_mu = tf.square(mu_value)
 
-        #log_variance_value = tf.keras.backend.get_value(self.log_variance)
-        exp_log_variance = tf.math.exp(self.log_variance)
+        log_variance_value = tf.keras.backend.get_value(self.log_variance)
+        exp_log_variance = tf.math.exp(log_variance_value)
 
         kl_loss = -0.5 * tf.reduce_sum( 1 + exp_log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
@@ -317,7 +317,7 @@ class VAE:
 
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
-            epsilon = tf.random.normal(shape=tf.shape(self.mu),
+            epsilon = tf.random.normal(shape=tf.shape(mu),
                                       mean=0.0, stddev=1.0)
             sampled_point = mu + tf.math.exp(log_variance / 2) * epsilon
             return sampled_point
