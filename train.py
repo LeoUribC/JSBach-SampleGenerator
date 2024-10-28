@@ -7,10 +7,10 @@ from autoencoder import VAE
 
 LEARNING_RATE = 0.0005
 BATCH_SIZE = 64
-EPOCHS = 150
+EPOCHS = 10
 
 # this path corresponds to google colab environment
-SPECTROGRAMS_PATH = "/content/spectrograms/"
+SPECTROGRAMS_PATH = "../spectrograms/"
 
 
 
