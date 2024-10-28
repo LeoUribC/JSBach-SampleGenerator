@@ -317,7 +317,7 @@ class VAE:
 
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
-            epsilon = tf.random.normal(shape=tf.shape(mu),
+            epsilon = tf.random.normal(shape=tf.shape(self.mu),
                                       mean=0.0, stddev=1.0)
             sampled_point = mu + tf.math.exp(log_variance / 2) * epsilon
             return sampled_point
