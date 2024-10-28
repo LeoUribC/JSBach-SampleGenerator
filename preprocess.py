@@ -126,6 +126,7 @@ class Saver:
     def save_feature(self, feature, file_path):
         save_path = self._generate_save_path(file_path)
         np.save(save_path, feature)
+        return save_path
     
 
     def save_min_max_values(self, min_max_values):
@@ -244,9 +245,9 @@ if __name__ == "__main__":
     MONO = True
 
     # change directories path to run on google colab
-    SPECTROGRAMS_SAVE_DIR = "/content/spectrograms"
-    MIN_MAX_VALUES_SAVE_DIR = "/content"
-    FILES_DIR = "/content/free-spoken-digit-dataset/recordings"
+    SPECTROGRAMS_SAVE_DIR = "../spectrograms"
+    MIN_MAX_VALUES_SAVE_DIR = "../"
+    FILES_DIR = "../free-spoken-digit-dataset/recordings"
 
     # instantiation of objects
     loader = Loader(SAMPLE_RATE, DURATION, MONO)
