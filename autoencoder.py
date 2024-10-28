@@ -3,18 +3,33 @@ import os
 import pickle
 
 #import keras as ks
+# from tensorflow.keras.models import Model
+# from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
+#     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+# from tensorflow.keras import backend as K
+# from tensorflow.keras.optimizers import Adam
+# #from tensorflow.keras.losses import MeanSquaredError
+# import numpy as np
+import tensorflow as tf
+
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
-from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import MeanSquaredError
+
+#from keras import Model
+#from keras.src.layers import Input, Conv2D, ReLU, BatchNormalization,\
+#    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+#from keras import backend as K
+#from keras.src.optimizers import Adam
 import numpy as np
-import tensorflow as tf
 
 
+#from keras.src.random import normal
+#from keras.api
+#from keras.src.ops import square, sum, exp
 
-tf.compat.v1.disable_eager_execution()
+#tf.compat.v1.disable_eager_execution()
 #tf.compat.v1.enable_eager_execution()
 
 
@@ -116,13 +131,21 @@ class VAE:
 
     def _calculate_reconstruction_loss(self, y_target, y_predicted):
         error = y_target - y_predicted
-        reconstruction_loss = K.mean(K.square(error), axis=[1, 2, 3])
+        reconstruction_loss = tf.reduce_mean(tf.square(error), axis=[1, 2, 3])
         return reconstruction_loss
     
-
+    #@tf.function
     def _calculate_kl_loss(self, y_target, y_predicted):
-        kl_loss = -0.5 * K.sum( 1 + self.log_variance - K.square(self.mu) -
-                                K.exp(self.log_variance), axis=1 )
+        
+        mu_value = tf.keras.backend.get_value(self.mu)
+        squared_mu = tf.square(mu_value)
+
+        log_variance_value = tf.keras.backend.get_value(self.log_variance)
+        exp_log_variance = tf.math.exp(log_variance_value)
+
+        kl_loss = -0.5 * tf.reduce_sum( 1 + exp_log_variance - squared_mu -
+                                exp_log_variance, axis=1 )
+        
         return kl_loss
 
 
@@ -172,7 +195,7 @@ class VAE:
     
 
     def _add_decoder_input(self):
-        return Input(shape=self.latent_space_dim, name="decoder_input")
+        return Input(shape=(self.latent_space_dim,), name="decoder_input")
     
 
     def _add_dense_layer(self, decoder_input):
@@ -283,8 +306,8 @@ class VAE:
         """
         Flatten data and add bottleneck with Gaussian sampling (Dense layer)
         """
-
-        self._shape_before_bottleneck = K.int_shape(x)[1:]
+    
+        self._shape_before_bottleneck = tf.keras.backend.int_shape(x)[1:]
         x = Flatten()(x)
 
         self.mu = Dense(self.latent_space_dim, name="mu")(x)
@@ -294,14 +317,17 @@ class VAE:
 
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
-            epsilon = K.random_normal(shape=K.shape(self.mu),
+            epsilon = tf.random.normal(shape=tf.shape(mu),
                                       mean=0.0, stddev=1.0)
-            sampled_point = mu + K.exp(log_variance / 2) * epsilon
+            sampled_point = mu + tf.math.exp(log_variance / 2) * epsilon
             return sampled_point
 
+        output_shape = (self.latent_space_dim,)
 
         x = Lambda(sample_point_from_normal_distribution,
-                   name="encoder_output")([self.mu, self.log_variance])
+                   output_shape=output_shape,
+                   name="encoder_output")([tf.keras.backend.get_value(self.mu),
+                                           tf.keras.backend.get_value(self.log_variance)])
 
         return x
 
