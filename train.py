@@ -10,7 +10,7 @@ BATCH_SIZE = 64
 EPOCHS = 150
 
 # this path corresponds to google colab environment
-SPECTROGRAMS_PATH = "content/spectrograms"
+SPECTROGRAMS_PATH = "/content/spectrograms"
 
 
 
