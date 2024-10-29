@@ -88,6 +88,8 @@ class VAE:
     
 
     def train(self, x_train, batch_size, num_epochs):
+        print(type(x_train))
+        print(x_train.shape)
         self.model.fit( x_train,
                         x_train,
                         batch_size=batch_size,
