@@ -12,22 +12,22 @@ import pickle
 # import numpy as np
 import tensorflow as tf
 
-#from tensorflow.keras import Model
+from tensorflow.keras.models import Model
 
-# # from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
-# #     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
-# # from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
+    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+from tensorflow.keras.optimizers import Adam
 
-from keras import Model
+#from keras import Model
 #from keras.src.layers import Input, Conv2D, ReLU, BatchNormalization,\
 #    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
 import keras as K
 #from keras.src.optimizers import Adam
 import numpy as np
 
-from keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
-    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
-from keras.optimizers import Adam
+# from keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
+#     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+# from keras.optimizers import Adam
 #from keras.src.random import normal
 #from keras.api
 #from keras.src.ops import square, sum, exp
