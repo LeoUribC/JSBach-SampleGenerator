@@ -137,11 +137,11 @@ class VAE:
     #@tf.function
     def _calculate_kl_loss(self, y_target, y_predicted):
         
-        mu_value = tf.keras.backend.get_value(self.mu)
-        squared_mu = tf.keras.backend.square(mu_value)
+        #mu_value = tf.keras.backend.get_value(self.mu)
+        squared_mu = tf.keras.backend.square(self.mu)
 
-        log_variance_value = tf.keras.backend.get_value(self.log_variance)
-        exp_log_variance = tf.keras.backend.exp(log_variance_value)
+        #log_variance_value = tf.keras.backend.get_value(self.log_variance)
+        exp_log_variance = tf.keras.backend.exp(self.log_variance)
 
         kl_loss = -0.5 * tf.keras.backend.sum( 1 + self.log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
