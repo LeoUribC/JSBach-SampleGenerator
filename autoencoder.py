@@ -27,6 +27,7 @@ import numpy as np
 
 from keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+from keras.optimizers import Adam
 #from keras.src.random import normal
 #from keras.api
 #from keras.src.ops import square, sum, exp
