@@ -20,7 +20,7 @@ from tensorflow.keras.optimizers import Adam
 #from keras import Model
 #from keras.src.layers import Input, Conv2D, ReLU, BatchNormalization,\
 #    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
-from keras import backend as K
+import keras as K
 #from keras.src.optimizers import Adam
 import numpy as np
 
@@ -145,7 +145,7 @@ class VAE:
         #exp_log_variance = tf.keras.backend.exp(self.log_variance)
         exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
 
-        kl_loss = -0.5 * K.sum( 1 + self.log_variance - squared_mu -
+        kl_loss = -0.5 * K.ops.sum( 1 + self.log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
         
         return kl_loss
