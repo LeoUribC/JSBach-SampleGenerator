@@ -153,7 +153,7 @@ class VAE:
         #exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
 
         kl_loss = -0.5 * K.sum( 1 + self.log_variance - squared_mu -
-                                exp_log_variance, axis=2 )
+                                exp_log_variance, axis=0 )
         print(type(kl_loss))
         return kl_loss
 
