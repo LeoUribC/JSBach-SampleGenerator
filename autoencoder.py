@@ -327,9 +327,9 @@ class VAE:
 
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
-            epsilon = tf.random.normal(shape=tf.shape(self.mu),
+            epsilon = tf.keras.backend.random_normal(shape=tf.keras.backend.int_shape(self.mu),
                                       mean=0.0, stddev=1.0)
-            sampled_point = mu + tf.math.exp(log_variance / 2) * epsilon
+            sampled_point = mu + tf.keras.backend.exp(log_variance / 2) * epsilon
             return sampled_point
 
         output_shape = (self.latent_space_dim,)
