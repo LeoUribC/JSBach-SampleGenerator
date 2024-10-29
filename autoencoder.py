@@ -146,7 +146,7 @@ class VAE:
         #exp_log_variance = tf.keras.backend.exp(self.log_variance)
         exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
 
-        kl_loss = -0.5 * K.ops.sum( 1 + self.log_variance - squared_mu -
+        kl_loss = -0.5 * tf.reduce_sum( 1 + self.log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
         
         return kl_loss
@@ -310,7 +310,7 @@ class VAE:
         Flatten data and add bottleneck with Gaussian sampling (Dense layer)
         """
     
-        self._shape_before_bottleneck = tf.keras.backend.int_shape(x)[1:]
+        self._shape_before_bottleneck = tf.shape(x)[1:]
         x = Flatten()(x)
 
         self.mu = Dense(self.latent_space_dim, name="mu")(x)
@@ -322,7 +322,7 @@ class VAE:
             mu, log_variance = args
             epsilon = tf.random.normal(shape=tf.shape(mu),
                                       mean=0.0, stddev=1.0)
-            sampled_point = mu + tf.math.exp(log_variance / 2) * epsilon
+            sampled_point = mu + tf.exp(log_variance / 2) * epsilon
             return sampled_point
 
         output_shape = (self.latent_space_dim,)
