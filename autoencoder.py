@@ -12,7 +12,10 @@ import pickle
 # import numpy as np
 import tensorflow as tf
 
-from tensorflow.keras import Model
+#from tensorflow.keras import Model
+
+from keras.src import Model
+
 from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
 from tensorflow.keras.optimizers import Adam
