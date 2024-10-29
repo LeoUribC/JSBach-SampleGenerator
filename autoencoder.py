@@ -316,8 +316,8 @@ class VAE:
         Flatten data and add bottleneck with Gaussian sampling (Dense layer)
         """
     
-        #self._shape_before_bottleneck = tf.keras.backend.int_shape(x)[1:]
-        self._shape_before_bottleneck = tf.shape(x)[1:]
+        self._shape_before_bottleneck = tf.keras.backend.int_shape(x)[1:]
+        #self._shape_before_bottleneck = tf.shape(x)[1:]
         x = Flatten()(x)
 
         self.mu = Dense(self.latent_space_dim, name="mu")(x)
