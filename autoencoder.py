@@ -18,10 +18,11 @@ from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
 from tensorflow.keras.optimizers import Adam
 
+import tensorflow.keras.backend as K
 #from keras import Model
 #from keras.src.layers import Input, Conv2D, ReLU, BatchNormalization,\
 #    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
-import keras as K
+#import keras as K
 #from keras.src.optimizers import Adam
 import numpy as np
 
@@ -144,14 +145,14 @@ class VAE:
     def _calculate_kl_loss(self, y_target, y_predicted):
         
         #mu_value = tf.keras.backend.get_value(self.mu)
-        #squared_mu = tf.square(self.mu)
-        squared_mu = Lambda(lambda x: tf.square(x))(self.mu)
+        squared_mu = K.square(self.mu)
+        #squared_mu = Lambda(lambda x: tf.square(x))(self.mu)
 
         #log_variance_value = tf.keras.backend.get_value(self.log_variance)
-        #exp_log_variance = tf.exp(self.log_variance)
-        exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
+        exp_log_variance = K.exp(self.log_variance)
+        #exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
 
-        kl_loss = -0.5 * K.ops.sum( 1 + self.log_variance - squared_mu -
+        kl_loss = -0.5 * K.sum( 1 + self.log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
         print(type(kl_loss))
         return kl_loss
