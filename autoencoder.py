@@ -134,6 +134,7 @@ class VAE:
         reconstruction_loss = tf.reduce_mean(tf.square(error), axis=[1, 2, 3])
         return reconstruction_loss
     
+    
     #@tf.function
     def _calculate_kl_loss(self, y_target, y_predicted):
         
@@ -145,7 +146,7 @@ class VAE:
         #exp_log_variance = tf.keras.backend.exp(self.log_variance)
         exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
 
-        kl_loss = -0.5 * K.ops.sum( 1 + self.log_variance - squared_mu -
+        kl_loss = -0.5 * tf.math.reduce_sum( 1 + self.log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
         
         return kl_loss

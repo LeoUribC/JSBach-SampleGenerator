@@ -42,7 +42,6 @@ def train(x_train, learning_rate, batch_size, epochs):
 
     autoencoder.summary()
     autoencoder.compile(learning_rate)
-    print(type(x_train))
     autoencoder.train(x_train, batch_size, epochs)
     
     return autoencoder
