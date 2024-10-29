@@ -144,15 +144,15 @@ class VAE:
     #@tf.function
     def _calculate_kl_loss(self, y_target, y_predicted):
         
-        mu_value = tf.keras.backend.get_value(self.mu)
-        squared_mu = K.square(mu_value)
+        #mu_value = tf.keras.backend.get_value(self.mu)
+        squared_mu = K.square(self.mu)
         #squared_mu = Lambda(lambda x: tf.square(x))(self.mu)
 
-        log_variance_value = tf.keras.backend.get_value(self.log_variance)
-        exp_log_variance = K.exp(log_variance_value)
+        #log_variance_value = tf.keras.backend.get_value(self.log_variance)
+        exp_log_variance = K.exp(self.log_variance)
         #exp_log_variance = Lambda(lambda x: tf.exp(x))(self.log_variance)
 
-        kl_loss = -0.5 * K.sum( 1 + log_variance_value - squared_mu -
+        kl_loss = -0.5 * K.sum( 1 + self.log_variance - squared_mu -
                                 exp_log_variance, axis=1 )
         print(type(kl_loss))
         return kl_loss
@@ -335,8 +335,8 @@ class VAE:
 
         x = Lambda(sample_point_from_normal_distribution,
                    output_shape=output_shape,
-                   name="encoder_output")([tf.keras.backend.get_value(self.mu),
-                                           tf.keras.backend.get_value(self.log_variance)])
+                   name="encoder_output")([self.mu,
+                                           self.log_variance])
 
         return x
 
