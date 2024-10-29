@@ -134,7 +134,7 @@ class VAE:
         reconstruction_loss = tf.reduce_mean(tf.square(error), axis=[1, 2, 3])
         return reconstruction_loss
     
-    #@tf.function
+    @tf.function
     def _calculate_kl_loss(self, y_target, y_predicted):
         
         #mu_value = tf.keras.backend.get_value(self.mu)
