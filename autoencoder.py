@@ -18,7 +18,7 @@ from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
     Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
 from tensorflow.keras.optimizers import Adam
 
-import keras.backend as K
+import keras.ops as K
 #from keras import Model
 #from keras.src.layers import Input, Conv2D, ReLU, BatchNormalization,\
 #    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
