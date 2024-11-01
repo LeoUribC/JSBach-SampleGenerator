@@ -10,7 +10,7 @@ BATCH_SIZE = 64
 EPOCHS = 150
 
 # this path corresponds to google colab environment
-SPECTROGRAMS_PATH = "../spectrograms/"
+SPECTROGRAMS_PATH = "../spectrograms"
 
 
 
@@ -33,7 +33,7 @@ def load_fsdd(spectrograms_path):
 def train(x_train, learning_rate, batch_size, epochs):
 
     autoencoder = VAE(
-        input_shape=(256, 64, 1),
+        input_shape=(256, 784, 1),
         conv_filters=(512, 256, 128, 64, 32),
         conv_kernels=(3, 3, 3 ,3, 3),
         conv_strides=(2, 2, 2, 2, (2, 1)),
