@@ -50,12 +50,20 @@ class VAE(nn.Module):
         return nn.Sequential(*layers)
 
 
+    # def _get_shape_before_bottleneck(self):
+    #     # Pass a dummy input through the encoder to determine the shape
+    #     with torch.no_grad():
+    #         dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
+    #         output = self.encoder(dummy_input)
+    #         return int(np.prod(output.size()[1:]))  # Flatten the output shape
+
+
     def _get_shape_before_bottleneck(self):
         # Pass a dummy input through the encoder to determine the shape
         with torch.no_grad():
             dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
             output = self.encoder(dummy_input)
-            return int(np.prod(output.size()[1:]))  # Flatten the output shape
+            return output.shape  # Capture the 3D shape before flattening
 
 
     def _build_decoder(self):
@@ -71,6 +79,19 @@ class VAE(nn.Module):
         return nn.Sequential(*layers)
 
 
+    # def forward(self, x):
+    #     # Encoding
+    #     x = self.encoder(x)
+    #     x = torch.flatten(x, start_dim=1)
+    #     mu = self.mu(x)
+    #     log_var = self.log_var(x)
+    #     z = self.reparameterize(mu, log_var)
+        
+    #     # Decoding
+    #     x_recon = self.decoder(z.view(-1, self.conv_filters[-1], 1, 1))
+    #     return x_recon, mu, log_var
+
+
     def forward(self, x):
         # Encoding
         x = self.encoder(x)
@@ -80,7 +101,10 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, log_var)
         
         # Decoding
-        x_recon = self.decoder(z.view(-1, self.conv_filters[-1], 1, 1))
+        # Reshape z to match the input size expected by the decoder
+        z = z.view(-1, self.conv_filters[-1], self._shape_before_bottleneck[1], self._shape_before_bottleneck[2])
+        x_recon = self.decoder(z)
+        
         return x_recon, mu, log_var
 
 
@@ -90,6 +114,15 @@ class VAE(nn.Module):
         return mu + eps * std
 
 
+    # def loss_function(self, recon_x, x, mu, log_var):
+    #     # Reconstruction loss
+    #     recon_loss = F.mse_loss(recon_x, x, reduction='sum')
+    #     # KL divergence loss
+    #     kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    #     return self.reconstruction_loss_weight * recon_loss + kl_loss
+
+
+    # Ensure loss function expects consistent shapes
     def loss_function(self, recon_x, x, mu, log_var):
         # Reconstruction loss
         recon_loss = F.mse_loss(recon_x, x, reduction='sum')
