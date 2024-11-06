@@ -1,321 +1,118 @@
-
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
 import os
 import pickle
-
-#import keras as ks
-from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization,\
-    Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
-from tensorflow.keras import backend as K
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
-import tensorflow as tf
 
 
+class VAE(nn.Module):
 
-tf.compat.v1.disable_eager_execution()
-#tf.compat.v1.enable_eager_execution()
-
-
-class VAE:
     """
     VAE represents a Deep Convolutional VAE architecture with
     mirrored encoder and decoder components.
     """
 
-    def __init__(self,
-                 input_shape,
-                 conv_filters,
-                 conv_kernels,
-                 conv_strides,
-                 latent_space_dim):
+    def __init__(self, input_shape, conv_filters, conv_kernels, conv_strides, latent_space_dim):
+        super(VAE, self).__init__()
         
-        # these are lists
+        # Model parameters
         self.input_shape = input_shape
         self.conv_filters = conv_filters
         self.conv_kernels = conv_kernels
         self.conv_strides = conv_strides
-
         self.latent_space_dim = latent_space_dim
         self.reconstruction_loss_weight = 1000000
 
-        self.encoder = None
-        self.decoder = None
-        self.model = None
+        # Encoder
+        self.encoder = self._build_encoder()
 
-        # private attributes
-        self._num_conv_layers = len(conv_filters)
-        self._shape_before_bottleneck = None
-        self._model_input = None
-        
-        self._build()
-    
+        # Determine shape before bottleneck by passing a dummy input
+        self._shape_before_bottleneck = self._get_shape_before_bottleneck()
 
-    def summary(self):
-        """
-        to print on console information about the architecture
-        """
-        self.encoder.summary()
-        self.decoder.summary()
-        self.model.summary()
-    
+        # Latent space sampling layers
+        self.mu = nn.Linear(self._shape_before_bottleneck, latent_space_dim)
+        self.log_var = nn.Linear(self._shape_before_bottleneck, latent_space_dim)
 
-    def compile(self, learning_rate=0.0001):
-        optimizer = Adam(learning_rate=learning_rate)
-        self.model.compile(optimizer=optimizer,
-                           loss=self._calculate_combined_loss,
-                           metrics=[self._calculate_reconstruction_loss,
-                                    self._calculate_kl_loss])
-    
-
-    def train(self, x_train, batch_size, num_epochs):
-        self.model.fit( x_train,
-                        x_train,
-                        batch_size=batch_size,
-                        epochs=num_epochs,
-                        shuffle=True )
-    
-
-    def save(self, save_folder="."):
-        self._create_folder_if_it_doesnt_exist(save_folder)
-        self._save_parameters(save_folder)
-        self._save_weights(save_folder)
-    
-
-    def load_weights(self, weights_path):
-        self.model.load_weights(weights_path)
-    
-
-    def reconstruct(self, images):
-        latent_representations = self.encoder.predict(images)
-        reconstructed_images = self.decoder.predict(latent_representations)
-        return reconstructed_images, latent_representations
-    
-
-    @classmethod
-    def load(cls, save_folder="."):
-
-        parameters_path = os.path.join(save_folder, "parameters.pkl")
-        with open(parameters_path, "rb") as f:
-            parameters = pickle.load(f)
-
-        autoencoder = VAE(*parameters)
-        weights_path = os.path.join(save_folder, ".weights.h5")
-        autoencoder.load_weights(weights_path)
-
-        return autoencoder
-    
-
-    def _calculate_combined_loss(self, y_target, y_predicted):
-        reconstruction_loss = self._calculate_reconstruction_loss(y_target, y_predicted)
-        kl_loss = self._calculate_kl_loss(y_target, y_predicted)
-        combined_loss = self.reconstruction_loss_weight * reconstruction_loss + kl_loss
-        return combined_loss
-    
-
-    def _calculate_reconstruction_loss(self, y_target, y_predicted):
-        error = y_target - y_predicted
-        reconstruction_loss = K.mean(K.square(error), axis=[1, 2, 3])
-        return reconstruction_loss
-    
-
-    def _calculate_kl_loss(self, y_target, y_predicted):
-        kl_loss = -0.5 * K.sum( 1 + self.log_variance - K.square(self.mu) -
-                                K.exp(self.log_variance), axis=1 )
-        return kl_loss
-
-
-    def _create_folder_if_it_doesnt_exist(self, folder):
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-    
-
-    def _save_parameters(self, save_folder):
-        parameters = [
-            self.input_shape,
-            self.conv_filters,
-            self.conv_kernels,
-            self.conv_strides,
-            self.latent_space_dim
-        ]
-
-        save_path = os.path.join(save_folder, "parameters.pkl")
-        with open(save_path, "wb") as f:
-            pickle.dump(parameters, f)
-    
-
-    def _save_weights(self, save_folder):
-        save_path = os.path.join(save_folder, ".weights.h5")
-        self.model.save_weights(save_path)
-
-    
-    def _build(self):
-        self._build_encoder()
-        self._build_decoder()
-        self._build_autoencoder()
-    
-
-    def _build_autoencoder(self):
-        model_input = self._model_input
-        model_output = self.decoder( self.encoder(model_input) )
-        self.model = Model(model_input, model_output, name="autoencoder")
-    
-
-    def _build_decoder(self):
-        decoder_input = self._add_decoder_input()
-        dense_layer = self._add_dense_layer(decoder_input)
-        reshape_layer = self._add_reshape_layer(dense_layer)
-        conv_transpose_layers = self._add_conv_transpose_layers(reshape_layer)
-        decoder_output = self._add_decoder_output(conv_transpose_layers)
-        self.decoder = Model(decoder_input, decoder_output, name="decoder")
-    
-
-    def _add_decoder_input(self):
-        return Input(shape=self.latent_space_dim, name="decoder_input")
-    
-
-    def _add_dense_layer(self, decoder_input):
-        num_neurons = np.prod(self._shape_before_bottleneck)
-        dense_layer = Dense(num_neurons, name="decoder_dense")(decoder_input)
-        return dense_layer
-    
-
-    def _add_reshape_layer(self, dense_layer):
-        return Reshape(self._shape_before_bottleneck)(dense_layer)
-    
-
-    def _add_conv_transpose_layers(self, x):
-        """
-        Add conv transpose blocks
-        """
-        # loop through all the conv layers in reverse order and stop at the 1st layer
-        for layer_index in reversed( range(1, self._num_conv_layers) ):
-            x = self._add_conv_transpose_layer(layer_index, x)
-
-        return x
-    
-
-    def _add_conv_transpose_layer(self, layer_index, x):
-
-        layer_num = self._num_conv_layers - layer_index
-
-        conv_transpose_layer = Conv2DTranspose(
-            filters = self.conv_filters[layer_index],
-            kernel_size = self.conv_kernels[layer_index],
-            strides = self.conv_strides[layer_index],
-            padding="same",
-            name=f"decoder_conv_transpose_layer_{layer_num}"
-        )
-
-        x = conv_transpose_layer(x)
-        x = ReLU(name=f"decoder_relu_{layer_num}")(x)
-        x = BatchNormalization(name=f"decoder_bn_{layer_num}")(x)
-
-        return x
-    
-
-    def _add_decoder_output(self, x):
-
-        conv_transpose_layer = Conv2DTranspose(
-            filters = 1,
-            kernel_size = self.conv_kernels[0],
-            strides = self.conv_strides[0],
-            padding="same",
-            name=f"decoder_conv_transpose_layer_{self._num_conv_layers}"
-        )
-
-        x = conv_transpose_layer(x)
-        output_layer = Activation("sigmoid", name="sigmoid_layer")(x)
-
-        return output_layer
+        # Decoder
+        self.decoder = self._build_decoder()
 
 
     def _build_encoder(self):
-        encoder_input = self._add_encoder_input()
-        conv_layers = self._add_conv_layers(encoder_input)
-        bottleneck = self._add_bottleneck(conv_layers)
-        self._model_input = encoder_input
-        self.encoder = Model(encoder_input, bottleneck, name='encoder')
-    
+        layers = []
+        in_channels = self.input_shape[0]
+        for filters, kernel, stride in zip(self.conv_filters, self.conv_kernels, self.conv_strides):
+            layers.append(nn.Conv2d(in_channels, filters, kernel_size=kernel, stride=stride, padding=1))
+            layers.append(nn.ReLU())
+            layers.append(nn.BatchNorm2d(filters))
+            in_channels = filters
+        return nn.Sequential(*layers)
 
-    def _add_encoder_input(self):
-        return Input(shape=self.input_shape, name='encoder_input')
-    
 
-    def _add_conv_layers(self, encoder_input):
-        """
-        This creates all convolutionals blocks in encoder
-        """
-        x = encoder_input
+    def _get_shape_before_bottleneck(self):
+        # Pass a dummy input through the encoder to determine the shape
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
+            output = self.encoder(dummy_input)
+            return int(np.prod(output.size()[1:]))  # Flatten the output shape
 
-        for layer_index in range(self._num_conv_layers):
-            x = self._add_conv_layer(layer_index, x)
+
+    def _build_decoder(self):
+        layers = []
+        in_channels = self.conv_filters[-1]
+        for filters, kernel, stride in zip(reversed(self.conv_filters), reversed(self.conv_kernels), reversed(self.conv_strides)):
+            layers.append(nn.ConvTranspose2d(in_channels, filters, kernel_size=kernel, stride=stride, padding=1))
+            layers.append(nn.ReLU())
+            layers.append(nn.BatchNorm2d(filters))
+            in_channels = filters
+        layers.append(nn.ConvTranspose2d(in_channels, self.input_shape[0], kernel_size=self.conv_kernels[0], stride=self.conv_strides[0], padding=1))
+        layers.append(nn.Sigmoid())
+        return nn.Sequential(*layers)
+
+
+    def forward(self, x):
+        # Encoding
+        x = self.encoder(x)
+        x = torch.flatten(x, start_dim=1)
+        mu = self.mu(x)
+        log_var = self.log_var(x)
+        z = self.reparameterize(mu, log_var)
         
-        return x
+        # Decoding
+        x_recon = self.decoder(z.view(-1, self.conv_filters[-1], 1, 1))
+        return x_recon, mu, log_var
 
 
-    def _add_conv_layer(self, layer_index, x):
-        """
-        Adds a convolutional block to a graph of layers, consisting of
-        conv 2d + ReLU + batch normalization layer
-        """
-
-        layer_number = layer_index + 1
-
-        conv_layer = Conv2D(
-            filters = self.conv_filters[layer_index],
-            kernel_size = self.conv_kernels[layer_index],
-            strides = self.conv_strides[layer_index],
-            padding = "same",
-            name = f"encoder_conv_layer_{layer_number}"
-        )
-
-        x = conv_layer(x)
-        x = ReLU(name=f"encoder_relu_{layer_number}")(x)
-        x = BatchNormalization(name=f"encoder_bn_{layer_number}")(x)
-
-        return x
-    
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return mu + eps * std
 
 
-    def _add_bottleneck(self, x):
-        """
-        Flatten data and add bottleneck with Gaussian sampling (Dense layer)
-        """
-
-        self._shape_before_bottleneck = K.int_shape(x)[1:]
-        x = Flatten()(x)
-
-        self.mu = Dense(self.latent_space_dim, name="mu")(x)
-        self.log_variance = Dense(self.latent_space_dim,
-                                  name="log_variance")(x)
-        
-
-        def sample_point_from_normal_distribution(args):
-            mu, log_variance = args
-            epsilon = K.random_normal(shape=K.shape(self.mu),
-                                      mean=0.0, stddev=1.0)
-            sampled_point = mu + K.exp(log_variance / 2) * epsilon
-            return sampled_point
+    def loss_function(self, recon_x, x, mu, log_var):
+        # Reconstruction loss
+        recon_loss = F.mse_loss(recon_x, x, reduction='sum')
+        # KL divergence loss
+        kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        return self.reconstruction_loss_weight * recon_loss + kl_loss
 
 
-        x = Lambda(sample_point_from_normal_distribution,
-                   name="encoder_output")([self.mu, self.log_variance])
+    def save_model(self, path):
+        torch.save(self.state_dict(), os.path.join(path, "vae_weights.pth"))
 
-        return x
+
+    def load_model(self, path):
+        self.load_state_dict(torch.load(os.path.join(path, "vae_weights.pth")))
 
 
 
-if __name__ == "__main__":
+# Test VAE initialization with sample parameters
+vae = VAE( input_shape=(1, 28, 28),
+            conv_filters=(32, 64, 64, 64),
+            conv_kernels=[3, 3, 3, 3],
+            conv_strides=[1, 2, 2, 1],
+            latent_space_dim=2 )
 
-    autoencoder = VAE(
-        input_shape=(28, 28, 1),
-        conv_filters=(32, 64, 64, 64),
-        conv_kernels=(3, 3, 3 ,3),
-        conv_strides=(1, 2, 2, 1),
-        latent_space_dim=2
-    )
-
-    autoencoder.summary()
-
+# Print summary of model structure to verify
+print(vae)
