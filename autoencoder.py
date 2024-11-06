@@ -50,20 +50,20 @@ class VAE(nn.Module):
         return nn.Sequential(*layers)
 
 
-    def _get_shape_before_bottleneck(self):
-        # Pass a dummy input through the encoder to determine the shape
-        with torch.no_grad():
-            dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
-            output = self.encoder(dummy_input)
-            return int(np.prod(output.size()[1:]))  # Flatten the output shape
-
-
     # def _get_shape_before_bottleneck(self):
     #     # Pass a dummy input through the encoder to determine the shape
     #     with torch.no_grad():
     #         dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
     #         output = self.encoder(dummy_input)
-    #         return output.shape  # Capture the 3D shape before flattening
+    #         return int(np.prod(output.size()[1:]))  # Flatten the output shape
+
+
+    def _get_shape_before_bottleneck(self):
+        # Pass a dummy input through the encoder to determine the 3D shape before flattening
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
+            output = self.encoder(dummy_input)
+            return output.shape[1:]  # Return (channels, height, width)
 
 
     def _build_decoder(self):
@@ -114,21 +114,21 @@ class VAE(nn.Module):
         return mu + eps * std
 
 
-    # def loss_function(self, recon_x, x, mu, log_var):
-    #     # Reconstruction loss
-    #     recon_loss = F.mse_loss(recon_x, x, reduction='sum')
-    #     # KL divergence loss
-    #     kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-    #     return self.reconstruction_loss_weight * recon_loss + kl_loss
-
-
-    # Ensure loss function expects consistent shapes
     def loss_function(self, recon_x, x, mu, log_var):
         # Reconstruction loss
         recon_loss = F.mse_loss(recon_x, x, reduction='sum')
         # KL divergence loss
         kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
         return self.reconstruction_loss_weight * recon_loss + kl_loss
+
+
+    # # Ensure loss function expects consistent shapes
+    # def loss_function(self, recon_x, x, mu, log_var):
+    #     # Reconstruction loss
+    #     recon_loss = F.mse_loss(recon_x, x, reduction='sum')
+    #     # KL divergence loss
+    #     kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    #     return self.reconstruction_loss_weight * recon_loss + kl_loss
 
 
     def save_model(self, path):
@@ -140,12 +140,12 @@ class VAE(nn.Module):
 
 
 
-# Test VAE initialization with sample parameters
-vae = VAE( input_shape=(1, 28, 28),
-            conv_filters=(32, 64, 64, 64),
-            conv_kernels=[3, 3, 3, 3],
-            conv_strides=[1, 2, 2, 1],
-            latent_space_dim=2 )
+# # Test VAE initialization with sample parameters
+# vae = VAE( input_shape=(1, 28, 28),
+#             conv_filters=(32, 64, 64, 64),
+#             conv_kernels=[3, 3, 3, 3],
+#             conv_strides=[1, 2, 2, 1],
+#             latent_space_dim=2 )
 
-# Print summary of model structure to verify
-print(vae)
+# # Print summary of model structure to verify
+# print(vae)
