@@ -50,20 +50,20 @@ class VAE(nn.Module):
         return nn.Sequential(*layers)
 
 
-    # def _get_shape_before_bottleneck(self):
-    #     # Pass a dummy input through the encoder to determine the shape
-    #     with torch.no_grad():
-    #         dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
-    #         output = self.encoder(dummy_input)
-    #         return int(np.prod(output.size()[1:]))  # Flatten the output shape
-
-
     def _get_shape_before_bottleneck(self):
         # Pass a dummy input through the encoder to determine the shape
         with torch.no_grad():
             dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
             output = self.encoder(dummy_input)
-            return output.shape  # Capture the 3D shape before flattening
+            return int(np.prod(output.size()[1:]))  # Flatten the output shape
+
+
+    # def _get_shape_before_bottleneck(self):
+    #     # Pass a dummy input through the encoder to determine the shape
+    #     with torch.no_grad():
+    #         dummy_input = torch.zeros(1, *self.input_shape)  # Shape: (1, channels, height, width)
+    #         output = self.encoder(dummy_input)
+    #         return output.shape  # Capture the 3D shape before flattening
 
 
     def _build_decoder(self):
