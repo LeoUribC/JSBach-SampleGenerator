@@ -20,7 +20,6 @@ class Loader:
     This Loader is responsible for loading an audio file
     """
 
-
     def __init__(self, sample_rate, duration, mono):
         self.sample_rate = sample_rate
         self.duration = duration
@@ -28,86 +27,87 @@ class Loader:
 
 
     def load(self, file_path):
-        signal = librosa.load(file_path,
+        y, sr = librosa.load( file_path,
                               sr=self.sample_rate,
                               duration=self.duration,
-                              mono=self.mono)[0]
-        return signal
+                              mono=self.mono )
+        return y, sr
 
 
 
-class Padder:
+# class Padder:
 
-    """
-    Padder is responsible to apply padding to an array
-    """
+#     """
+#     Padder is responsible to apply padding to an array
+#     """
 
-    def __init__(self, mode="constant"):
-        self.mode = mode
+#     def __init__(self, mode="constant"):
+#         self.mode = mode
     
 
-    def left_pad(self, array, num_missing_items):
-        padded_array = np.pad(array,
-                              (num_missing_items, 0),
-                              mode=self.mode)
-        return padded_array
+#     def left_pad(self, array, num_missing_items):
+#         padded_array = np.pad(array,
+#                               (num_missing_items, 0),
+#                               mode=self.mode)
+#         return padded_array
 
 
-    def right_pad(self, array, num_missing_items):
-        padded_array = np.pad(array,
-                              (0, num_missing_items),
-                              mode=self.mode)
-        return padded_array
+#     def right_pad(self, array, num_missing_items):
+#         padded_array = np.pad(array,
+#                               (0, num_missing_items),
+#                               mode=self.mode)
+#         return padded_array
 
 
 
-class LogSpectrogramExtractor:
+class SpectrogramExtractor:
     
     """
-    LogSpectrogramExtractor extracts log spectrograms (in dB) from a
+    SpectrogramExtractor extracts log spectrograms (in dB) from a
     time-series signal
     """
 
-    def __init__(self, frame_size, hop_length):
+    def __init__(self, frame_size, hop_length, n_mels):
         self.frame_size = frame_size
         self.hop_length = hop_length
+        self.n_mels = n_mels
 
 
-    def extract(self, signal):
+    def extract(self, y, sample_rate):
         
-        # short time fourier transform
-        stft = librosa.stft(signal,
-                            n_fft=self.frame_size,
-                            hop_length=self.hop_length)[:-1]
+        # using mel spectrogram function from librosa
+        mel_spectrogram = librosa.feature.\
+            melspectrogram( y=y, sr=sample_rate, n_fft=self.frame_size,
+                            hop_length=self.hop_length, n_mels=self.n_mels )
+
+        mel_spectrogram_db = librosa.power_to_db(mel_spectrogram,
+                                                 ref = np.max)
         
-        spectrogram = np.abs(stft)
-        log_spectrogram = librosa.amplitude_to_db(spectrogram)
-        
-        return log_spectrogram
+        return mel_spectrogram_db
 
 
 
-class MinMaxNormalizer:
+# class MinMaxNormalizer:
 
-    """
-    MinMaxNormalizer applies min max normalization to an array
-    """
+#     """
+#     MinMaxNormalizer applies min max normalization to an array
+#     """
 
-    def __init__(self, min_val, max_val):
-        self.min = min_val
-        self.max = max_val
+#     def __init__(self, min_val, max_val):
+#         self.min = min_val
+#         self.max = max_val
     
 
-    def normalize(self, array):
-        norm_array = ( array - array.min() ) / ( array.max() - array.min() )
-        norm_array = norm_array * (self.max - self.min) + self.min
-        return norm_array
+#     def normalize(self, array):
+#         norm_array = ( array - array.min() ) / ( array.max() - array.min() )
+#         norm_array = norm_array * (self.max - self.min) + self.min
+#         return norm_array
 
 
-    def denormalize(self, norm_array, original_min, original_max):
-        array = (norm_array - self.min) / (self.max - self.min)
-        array = array * (original_max - original_min) + original_min
-        return array
+#     def denormalize(self, norm_array, original_min, original_max):
+#         array = (norm_array - self.min) / (self.max - self.min)
+#         array = array * (original_max - original_min) + original_min
+#         return array
 
 
 
@@ -167,9 +167,9 @@ class PreprocessingPipeline:
     def __init__(self):
 
         #self.loader = None
-        self.padder = None
+        #self.padder = None
         self.extractor = None
-        self.normalizer = None
+        #self.normalizer = None
         self.saver = None
         self.min_max_values = {}
         self._loader = None
@@ -200,31 +200,31 @@ class PreprocessingPipeline:
     
     def _process_file(self, file_path):
 
-        signal = self.loader.load(file_path)
+        y, signal = self.loader.load(file_path)
 
-        if self._is_padding_necessary(signal):
-            signal = self._apply_padding(signal)
+        # if self._is_padding_necessary(signal):
+        #     signal = self._apply_padding(signal)
         
-        feature = self.extractor.extract(signal)
-        norm_feature = self.normalizer.normalize(feature)
-        save_path = self.saver.save_feature(norm_feature, file_path)
+        feature = self.extractor.extract(y, signal)
+        #norm_feature = #self.normalizer.normalize(feature)
+        save_path = self.saver.save_feature(feature, file_path)
         self._store_min_max_value( save_path, feature.min(), feature.max() )
 
 
-    def _is_padding_necessary(self, signal):
+    # def _is_padding_necessary(self, signal):
         
-        if len(signal) < self._num_expected_samples:
-            return True
+    #     if len(signal) < self._num_expected_samples:
+    #         return True
         
-        return False
+    #     return False
     
 
-    def _apply_padding(self, signal):
+    # def _apply_padding(self, signal):
 
-        num_missing_samples = self._num_expected_samples - len(signal)
-        padded_signal = self.padder.right_pad(signal, num_missing_samples)
+    #     num_missing_samples = self._num_expected_samples - len(signal)
+    #     padded_signal = self.padder.right_pad(signal, num_missing_samples)
 
-        return padded_signal
+    #     return padded_signal
     
 
     def _store_min_max_value(self, save_path, min_val, max_val):
@@ -241,6 +241,7 @@ if __name__ == "__main__":
     FRAME_SIZE = 512
     HOP_LENGTH = 256
     DURATION = 9.84  # in seconds
+    N_MELS = 256
     SAMPLE_RATE = 22050
     MONO = True
 
@@ -251,16 +252,16 @@ if __name__ == "__main__":
 
     # instantiation of objects
     loader = Loader(SAMPLE_RATE, DURATION, MONO)
-    padder = Padder()
-    log_spectrogram_extractor = LogSpectrogramExtractor(FRAME_SIZE, HOP_LENGTH)
-    min_max_normalizer = MinMaxNormalizer(0, 1)
+    #padder = Padder()
+    spectrogram_extractor = SpectrogramExtractor(FRAME_SIZE, HOP_LENGTH, N_MELS)
+    #min_max_normalizer = MinMaxNormalizer(0, 1)
     saver = Saver(SPECTROGRAMS_SAVE_DIR, MIN_MAX_VALUES_SAVE_DIR)
 
     preprocessing_pipeline = PreprocessingPipeline()
     preprocessing_pipeline.loader = loader
-    preprocessing_pipeline.padder = padder
-    preprocessing_pipeline.extractor = log_spectrogram_extractor
-    preprocessing_pipeline.normalizer = min_max_normalizer
+    #preprocessing_pipeline.padder = padder
+    preprocessing_pipeline.extractor = spectrogram_extractor
+    #preprocessing_pipeline.normalizer = min_max_normalizer
     preprocessing_pipeline.saver = saver
 
     preprocessing_pipeline.process(FILES_DIR)
